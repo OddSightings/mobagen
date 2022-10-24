@@ -17,12 +17,20 @@ class World: GameObject {
   // |
   // even indexes are top elements;
   // odd indexes are left elements;
+
+  //length of vector is (SIZE + 1)(SIZE + 1) x 2
+  // SIZE = 2 because it represents the 2 bools for each point
+  //size is byte
+
   std::vector<bool> data;
   // convert a point into the index of the left vertex of the node
   inline int Point2DtoIndex(const Point2D& point){
     // todo: test. unstable interface
     auto sizeOver2 = sideSize/2;
     return (point.y + sizeOver2)*(sideSize+1)*2 + (point.x + sizeOver2)*2;
+    //
+    // adding point.y because the middle should be 0,0 instead of the top left being 0,0
+    //
   }
  public:
   explicit World(Engine* pEngine, int size);
