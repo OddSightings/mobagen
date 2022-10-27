@@ -24,8 +24,7 @@ class World: GameObject {
   // odd indexes are left elements;
 
   //length of vector is (SIZE + 1)(SIZE + 1) x 2
-  // SIZE = 2 because it represents the 2 bools for each point
-  //size is byte
+  // SIZE = number of sides in the grid
 
   std::vector<bool> data;
   // the boxes colors
