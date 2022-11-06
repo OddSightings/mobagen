@@ -1,10 +1,15 @@
 #include "World.h"
 #include "generators/RecursiveBacktracker.h"
+#include "generators/Eller.h"
 #include <chrono>
 
 World::World(Engine* pEngine, int size=11): GameObject(pEngine), sideSize(size) {
   generators.push_back(new MazeGenerator());
   generators.push_back(new RecursiveBacktracker());
+
+  Eller eller = new Eller();
+  eller.setRow(-size); //need to access the world size for the rows
+  generators.push_back(eller);
 }
 
 World::~World(){

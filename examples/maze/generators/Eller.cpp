@@ -3,46 +3,59 @@
 #include "Random.h"
 #include <climits>
 
+
+//note: top row is not zero, it is -1 * SIDE_SIZE
+// note: w->data is the list of bools
+// 
+// 
+// step 1: check North, if it is false, set setNum equal to node above it. The first row should have all North true so wouldn't apply. This means each Step only needs the rows before it and not the ones after
+// 
+//will fill in all points without a set with a random set
+//				for loop through the Row's vector
+//sets will start at 1, if they have 0 then they have not been filled
+//have a maxSet int stored that is increased every time a new set is used
+
+//instead of maxSet, could just use 1 through SIDE_SIZE and keep track of which ones are in use. Not sure if this is easier
+
+
+//after filling in the sets, group them up 
+//		maybe: 2 loops through the row, once will randomly place right walls (50% chance for each node maybe) then second will set the setNum of each group to be the same
+//		maybe: go through each node, if the one to the right is the same, place a wall, otherwise randomly add a wall (if you do not place a wall, the node on the right should have its set equal to left node, also all other nodes with its set)
+
+
+
+//have a check if this is the bottom row, if it is then all of the nodes are the same set and the bottoms should be True for all of them
+
 bool Eller::Step(World* w) 
 {
-	//note: top row is not zero, it is -1 * SIDE_SIZE
-	// note: w->data is the list of bools
-	// 
-	// 
-	// step 1: check North, if it is false, set setNum equal to node above it. The first row should have all North true so wouldn't apply. This means each Step only needs the rows before it and not the ones after
-	// 
-	//will fill in all points without a set with a random set
-	//				for loop through the Row's vector
-	//sets will start at 1, if they have 0 then they have not been filled
-	//have a maxSet int stored that is increased every time a new set is used
+	int sideLength = w->GetSize() / 2;
 
-	//instead of maxSet, could just use 1 through SIDE_SIZE and keep track of which ones are in use. Not sure if this is easier
+	if (abs(currentRow) > sideLength)
+	{
+		return false; //outside of maze
+	}
 
-
-	//after filling in the sets, group them up 
-	//		maybe: 2 loops through the row, once will randomly place right walls (50% chance for each node maybe) then second will set the setNum of each group to be the same
-	//		maybe: go through each node, if the one to the right is the same, place a wall, otherwise randomly add a wall (if you do not place a wall, the node on the right should have its set equal to left node, also all other nodes with its set)
+	//sets left and right walls
+	w->SetWest({ -sideLength, currentRow }, true);
+	w->SetEast({ sideLength, currentRow }, true);
 
 	
 
-	//have a check if this is the bottom row, if it is then all of the nodes are the same set and the bottoms should be True for all of them
-
-
-
-
-	//basically temp notes, fix and organize properly
-
-
-
+	if (currentRow == -sideLength) //first row, north should all be true
+	{
+		for (int i = -sideLength; i < sideLength; i++)
+		{
+			w->SetNorth({ i, currentRow }, true);
+		}
+	}
 
 	//step 1 of Maze Algorithm Notes
 
-	
+	if(currentRow == sideLength)
 	{
-		//for(-sideLength through sideLength
+		for (int i = -sideLength; i <= sideLength; i++)
 		{
-			m[i][rowNum] = m[-sideLength][rowNum]; //all same set
-			w->SetSouth({ i, rowNum }, true);
+			w->SetSouth({ i, currentRow }, true);
 		}
 
 
@@ -50,12 +63,10 @@ bool Eller::Step(World* w)
 	}
 
 	
-	//this is step 2 in the Maze Algorithm Notes
-	//for(-side length through side length
+	//step 2 in the Maze Algorithm Notes
+	for(int i = -sideLength; i <= sideLength; i++)
 	{
-		
-		int i = 4; //actually the i from the for loop this is just example
-		if (w->GetNorth({ i, rowNum }))
+		if (!w->GetNorth({ i, rowNum }))
 		{
 			m[i][rowNum] = m[i][rowNum - 1]; //sets set to the set of above cell
 		}
@@ -71,8 +82,8 @@ bool Eller::Step(World* w)
 
 
 	//step 3 in the Maze Algorithm Notes
-
-	//for(-side length through side length
+	//this is where walls get added
+	for (int i = -sideLength; i <= sideLength; i++)
 	{
 		srand((unsigned)time(NULL));
 
@@ -82,14 +93,14 @@ bool Eller::Step(World* w)
 
 			if (randNum > WALL_CHANCE) //put wall, no more needed to be done
 			{
-				w->SetWest({ i, rowNum }, true);
+				w->SetEast({ i, rowNum }, true);
 			}
 			else //didn't put wall, must group up the next set
 			{
-				std::vector<int> checkList = getSet(m[i][rowNum], rowNum, w);
-				for (int j = 0; j <= checkList.size() - 1; j++)
+				std::vector<Point2D> checkList = getSet(m[i][rowNum], rowNum, w);
+				for(auto p : checkList)
 				{
-					m[j][rowNum] = m[i][rowNum];
+					m[p.x][p.y] = m[i][rowNum];
 				}
 
 
@@ -97,35 +108,46 @@ bool Eller::Step(World* w)
 		}
 		else //next cell is same set, must put wall
 		{
-			w->SetWest({ i, rowNum }, true);
+			w->SetEast({ i, rowNum }, true);
 		}
-
-		
-
-
 	}
+
+	
+
+	
+
+
 
 	return true;
 
 
 }
 
-//don't really need the Row struct, could just use currentRow and do 1 through SIDE_LENGTH and get the positions
 
 void Eller::Clear(World* world) 
 {
+	m.clear();
 
+	int sideLength = w->GetSize() / 2;
+
+	for (int i = -sideLength; i <= sideLength; i++)
+	{
+		for (int j = -sideLength; j <= sideLength; j++)
+		{
+			m[i][j] = 0;
+		}
+	}
+	currentRow = -world->GetSize() / 2;
 }
 
-//use this to get all of the cells with the same set, then use (result.Length - 1)  to run through it and change them
-std::vector<int> Eller::getSet(int setNum, int rowNum, World* w)
+std::vector<Point2D> Eller::getSet(int setNum, int rowNum, World* w)
 {
 	auto sideOver2 = w->GetSize() / 2;
 	std::vector<Point2D> setList;
 	for (int i = -sideOver2; i <= sideOver2; i++) {
 		if (m[i][rowNum] == setNum)
 		{
-			setList.push_back(i);
+			setList.push_back({ i, rowNum });
 		}
 	}
 	return setList;
