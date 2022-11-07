@@ -18,7 +18,7 @@
 class Eller : public MazeGeneratorBase {
 private:
 
-	const int WALL_CHANCE = 50; //currently just 50/50, higher chance will make more vertical maze, lower will make more horizontal
+	const int WALL_CHANCE = 20; //currently just 50/50, higher chance will make more vertical maze, lower will make more horizontal
 
 
 	std::map<int, std::map<int, int>> m; //to give each point a set number

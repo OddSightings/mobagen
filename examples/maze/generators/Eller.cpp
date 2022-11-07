@@ -3,29 +3,6 @@
 #include "Random.h"
 #include <climits>
 
-
-//note: top row is not zero, it is -1 * SIDE_SIZE
-// note: w->data is the list of bools
-// 
-// 
-// step 1: check North, if it is false, set setNum equal to node above it. The first row should have all North true so wouldn't apply. This means each Step only needs the rows before it and not the ones after
-// 
-//will fill in all points without a set with a random set
-//				for loop through the Row's vector
-//sets will start at 1, if they have 0 then they have not been filled
-//have a maxSet int stored that is increased every time a new set is used
-
-//instead of maxSet, could just use 1 through SIDE_SIZE and keep track of which ones are in use. Not sure if this is easier
-
-
-//after filling in the sets, group them up 
-//		maybe: 2 loops through the row, once will randomly place right walls (50% chance for each node maybe) then second will set the setNum of each group to be the same
-//		maybe: go through each node, if the one to the right is the same, place a wall, otherwise randomly add a wall (if you do not place a wall, the node on the right should have its set equal to left node, also all other nodes with its set)
-
-
-
-//have a check if this is the bottom row, if it is then all of the nodes are the same set and the bottoms should be True for all of them
-
 bool Eller::Step(World* w) 
 {
 	usedSets.clear();
@@ -68,13 +45,13 @@ bool Eller::Step(World* w)
 	//step 2 in the Maze Algorithm Notes
 	for(int i = -sideLength; i <= sideLength; i++)
 	{
-		if (!w->GetNorth({ i, rowNum }))
+		if (!w->GetNorth({ i, currentRow }))
 		{
-			m[i][rowNum] = m[i][rowNum - 1]; //sets set to the set of above cell
+			m[i][currentRow] = m[i][currentRow - 1]; //sets set to the set of above cell
 		}
 		else
 		{
-			m[i][rowNum] = maxSet;
+			m[i][currentRow] = maxSet;
 			maxSet++;
 			//sets cell to new set
 		}
@@ -82,94 +59,76 @@ bool Eller::Step(World* w)
 
 	}
 
-
 	//step 3 in the Maze Algorithm Notes
 	//this is where walls get added
-	for (int i = -sideLength; i <= sideLength; i++)
+	for (int i = -sideLength; i < sideLength; i++)
 	{
 		srand((unsigned)time(NULL));
 
-		if (m[i][rowNum] == m[i + 1][rownum]) //the next cell is a different set, must randomly decide to add wall or not
+		if (m[i][currentRow] != m[i + 1][currentRow]) //the next cell is a different set, must randomly decide to add wall or not
 		{
 			int randNum = rand() % 100; // 0 - 100 range
 
 			if (randNum > WALL_CHANCE) //put wall, no more needed to be done
 			{
-				w->SetEast({ i, rowNum }, true);
+				w->SetEast({ i, currentRow }, true);
 			}
 			else //didn't put wall, must group up the next set
 			{
-				std::vector<Point2D> checkList = getSet(m[i][rowNum], rowNum, w);
-				for(auto p : checkList)
+				std::vector<Point2D> checkList = getSet(m[i + 1][currentRow], currentRow, w);
+				for (auto p : checkList)
 				{
-					m[p.x][p.y] = m[i][rowNum];
+					m[p.x][p.y] = m[i][currentRow];
 				}
-
-
 			}
 		}
 		else //next cell is same set, must put wall
 		{
-			w->SetEast({ i, rowNum }, true);
+			w->SetEast({ i, currentRow }, true);
 		}
-
-
-		//Adding south walls
-
-		for (int i = -sideLength; i <= sideLength; i++) //running through row
-		{
-			if (std::find(usedSets.begin(), usedSets.end(), m[i][currentRow]) == usedSets.end()) //set is not in used sets
-			{
-				std::vector<Point2D> currentSet = getSet(m[i][currentRow], currentRow, w);
-				if (currentSet.size() == 1) //only one member of set, south should be false
-				{
-					SetSouth(currentSet[0], false);
-				}
-				else //multiple members of set, all but one should have south walls (ideally would do random amount of elements but for now just doing 1)
-				{ 
-					srand((unsigned)time(NULL));
-					int randNum = rand() % currentSet.size()-1;
-					for (int j = 0; j <= currentSet.size() - 1; j++)
-					{
-						if (j == randNum)
-						{
-							m[currentSet[j].x][currentSet[j].y] = false;
-						}
-						else
-						{
-							m[currentSet[j].x][currentSet[j].y] = true;
-						}
-					}
-				}
-				usedSets.push_back(m[i][currentRow]); //adding set to used sets so it will not be checked again
-
-			}
-		}
-
-
-
-
-
 
 	}
 
-	
+	//Adding south walls
 
-	
-
-
-
+	for (int i = -sideLength; i <= sideLength; i++) //running through row
+	{
+		if (std::find(usedSets.begin(), usedSets.end(), m[i][currentRow]) == usedSets.end()) //set is not in used sets
+		{
+			std::vector<Point2D> currentSet = getSet(m[i][currentRow], currentRow, w);
+			if (currentSet.size() == 1) //only one member of set, south should be false
+			{
+				w->SetSouth(currentSet[0], false);
+			}
+			else //multiple members of set, all but one should have south walls (ideally would do random amount of elements but for now just doing 1)
+			{ 
+				srand((unsigned)time(NULL));
+				int randNum = rand() % currentSet.size()-1;
+				for (int j = 0; j <= currentSet.size() - 1; j++)
+				{
+					if (j == randNum)
+					{
+						w->SetSouth(currentSet[j], false);
+					}
+					else
+					{
+						w->SetSouth(currentSet[j], true);
+					}
+				}
+			}
+			usedSets.push_back(m[i][currentRow]); //adding set to used sets so it will not be checked again
+		}
+	}
+	currentRow++;
 	return true;
-
-
 }
-
 
 void Eller::Clear(World* world) 
 {
 	m.clear();
+	usedSets.clear();
 
-	int sideLength = w->GetSize() / 2;
+	int sideLength = world->GetSize() / 2;
 
 	for (int i = -sideLength; i <= sideLength; i++)
 	{
