@@ -18,7 +18,6 @@ bool Eller::Step(World* w)
 	w->SetWest({ -sideLength, currentRow }, true);
 	w->SetEast({ sideLength, currentRow }, true);
 
-	
 
 	if (currentRow == -sideLength) //first row, north should all be true
 	{
@@ -30,14 +29,17 @@ bool Eller::Step(World* w)
 
 	//step 1 of Maze Algorithm Notes
 
-	if(currentRow == sideLength)
+	if(currentRow == sideLength) //bottom row, south should all be true
 	{
 		for (int i = -sideLength; i <= sideLength; i++)
 		{
 			w->SetSouth({ i, currentRow }, true);
+			if (i != sideLength)
+			{
+				w->SetEast({ i, currentRow }, false);
+			}
+
 		}
-
-
 		return true; //don't need the rest
 	}
 
@@ -63,18 +65,18 @@ bool Eller::Step(World* w)
 	//this is where walls get added
 	for (int i = -sideLength; i < sideLength; i++)
 	{
-		srand((unsigned)time(NULL));
-
 		if (m[i][currentRow] != m[i + 1][currentRow]) //the next cell is a different set, must randomly decide to add wall or not
 		{
-			int randNum = rand() % 100; // 0 - 100 range
+			
+			int randNum = rand() % 101; // 0 - 100 range
 
-			if (randNum > WALL_CHANCE) //put wall, no more needed to be done
+			if (randNum < WALL_CHANCE) //put wall, no more needed to be done
 			{
 				w->SetEast({ i, currentRow }, true);
 			}
 			else //didn't put wall, must group up the next set
 			{
+				w->SetEast({ i, currentRow }, false);
 				std::vector<Point2D> checkList = getSet(m[i + 1][currentRow], currentRow, w);
 				for (auto p : checkList)
 				{
@@ -102,8 +104,8 @@ bool Eller::Step(World* w)
 			}
 			else //multiple members of set, all but one should have south walls (ideally would do random amount of elements but for now just doing 1)
 			{ 
-				srand((unsigned)time(NULL));
-				int randNum = rand() % currentSet.size()-1;
+				
+				int randNum = rand() % (currentSet.size()-1);
 				for (int j = 0; j <= currentSet.size() - 1; j++)
 				{
 					if (j == randNum)
@@ -138,6 +140,7 @@ void Eller::Clear(World* world)
 		}
 	}
 	currentRow = -world->GetSize() / 2;
+	maxSet = 1;
 }
 
 std::vector<Point2D> Eller::getSet(int setNum, int rowNum, World* w)

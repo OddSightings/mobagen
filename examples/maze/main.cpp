@@ -5,6 +5,8 @@
 
 int main()
 {
+    srand((unsigned)time(NULL));
+
     SDL_Log("Creating Engine");
     auto engine = new Engine();
     SDL_Log("Engine Created");
