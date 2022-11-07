@@ -25,7 +25,7 @@ private:
 
 	int currentRow = 0; //will add 1 each Step to move down the last row
 	int maxSet = 1; //starting at 1 so i can check to see if there is no set
-
+	std::vector<int> usedSets; //saves used sets while adding south walls
 
 
 	std::vector<Point2D> getSet(int setNum, int rowNum, World* w);

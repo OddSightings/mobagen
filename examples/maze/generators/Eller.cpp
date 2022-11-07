@@ -28,6 +28,8 @@
 
 bool Eller::Step(World* w) 
 {
+	usedSets.clear();
+
 	int sideLength = w->GetSize() / 2;
 
 	if (abs(currentRow) > sideLength)
@@ -110,6 +112,45 @@ bool Eller::Step(World* w)
 		{
 			w->SetEast({ i, rowNum }, true);
 		}
+
+
+		//Adding south walls
+
+		for (int i = -sideLength; i <= sideLength; i++) //running through row
+		{
+			if (std::find(usedSets.begin(), usedSets.end(), m[i][currentRow]) == usedSets.end()) //set is not in used sets
+			{
+				std::vector<Point2D> currentSet = getSet(m[i][currentRow], currentRow, w);
+				if (currentSet.size() == 1) //only one member of set, south should be false
+				{
+					SetSouth(currentSet[0], false);
+				}
+				else //multiple members of set, all but one should have south walls (ideally would do random amount of elements but for now just doing 1)
+				{ 
+					srand((unsigned)time(NULL));
+					int randNum = rand() % currentSet.size()-1;
+					for (int j = 0; j <= currentSet.size() - 1; j++)
+					{
+						if (j == randNum)
+						{
+							m[currentSet[j].x][currentSet[j].y] = false;
+						}
+						else
+						{
+							m[currentSet[j].x][currentSet[j].y] = true;
+						}
+					}
+				}
+				usedSets.push_back(m[i][currentRow]); //adding set to used sets so it will not be checked again
+
+			}
+		}
+
+
+
+
+
+
 	}
 
 	
