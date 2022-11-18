@@ -11,7 +11,11 @@ std::vector<Color32> MyGenerator::Generate(int sideSize, float displacement) {
     for(int c=0;c<sideSize; c++){
       float rgb = ((noise.octave3D(c / 50.0, l / 50.0, displacement, 2) + 1) / 2) * 255;
       //i think from 1 - 255
-      if (rgb <= water)
+      if (blackout)
+      {
+          colors.emplace_back(0, 0, 0);
+      }
+      else if (rgb <= water)
       {
           colors.emplace_back(0, 0, 180);
       }

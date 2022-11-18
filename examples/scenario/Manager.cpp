@@ -121,6 +121,17 @@ void Manager::OnGui(ImGuiContext* context) {
   if(ImGui::Button("Pause")) {
     isSimulating = false;
   }
+  //test, can use to change values and add roads or erosion
+  if (generators[generatorId]->GetName() == "Tommy's")
+  {
+      if (ImGui::Button("Blackout"))
+      {
+          //generators[generatorId].blackout = true;
+          MyGenerator* temp = dynamic_cast<MyGenerator*>(generators[generatorId]);
+          temp->blackout = !temp->blackout;
+      }
+  }
+
   ImGui::End();
 }
 void Manager::Update(float deltaTime) {
