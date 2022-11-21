@@ -5,6 +5,9 @@
 #include "GameObject.h"
 #include "GeneratorBase.h"
 #include <SDL.h>
+#include <stdlib.h>     /* srand, rand */
+#include <time.h>       /* time */
+#include <chrono>
 
 class Manager: public GameObject {
  private:

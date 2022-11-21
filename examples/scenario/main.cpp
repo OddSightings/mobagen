@@ -8,6 +8,8 @@ int main(int, char**)  {
     auto engine = new Engine();
     SDL_Log("Engine Created");
 
+    srand(time(NULL));
+
     SDL_Log("Creating World Object");
     new Manager(engine, 21);
     SDL_Log("World Created");

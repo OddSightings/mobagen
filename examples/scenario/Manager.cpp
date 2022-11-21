@@ -128,7 +128,16 @@ void Manager::OnGui(ImGuiContext* context) {
       {
           //generators[generatorId].blackout = true;
           MyGenerator* temp = dynamic_cast<MyGenerator*>(generators[generatorId]);
-          temp->blackout = !temp->blackout;
+          temp->toggleBlackout();
+      }
+  }
+  if (generators[generatorId]->GetName() == "Tommy's")
+  {
+      if (ImGui::Button("Erosion"))
+      {
+          //generators[generatorId].blackout = true;
+          MyGenerator* temp = dynamic_cast<MyGenerator*>(generators[generatorId]);
+          temp->toggleErosion();
       }
   }
 
