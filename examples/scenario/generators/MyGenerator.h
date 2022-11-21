@@ -72,8 +72,8 @@ private:
 
 
 
-
-	int erosions = 100; //will add a slider in UI to control how much erosion there is
+	
+	int erosions = 600; //will add a slider in UI to control how much erosion there is
 
 
 protected:

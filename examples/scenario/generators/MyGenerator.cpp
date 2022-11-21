@@ -39,7 +39,6 @@ std::vector<Color32> MyGenerator::Generate(int sideSize, float displacement) {
       }
   }
       
-
   //modifications end
 
   for (int x = 0; x < sideSize; x++)
@@ -48,7 +47,8 @@ std::vector<Color32> MyGenerator::Generate(int sideSize, float displacement) {
       {
           if (blackout)
           {
-              colors.emplace_back(0, 0, 0);
+              float m = getHeightAtPoint(heights, x, y, sideSize) * 255;
+              colors.emplace_back(m, m, m);
           }
           else if (getHeightAtPoint(heights, x, y, sideSize)*255 <= water)
           {
@@ -73,8 +73,6 @@ std::vector<Color32> MyGenerator::Generate(int sideSize, float displacement) {
       }
   }
   std::cout<<colors.size() << std::endl;
-  // add altitude filtering behavior
-  // add island behaviors / peaks
   return colors;
 }
 
@@ -102,19 +100,14 @@ void MyGenerator::Erode(std::vector<float>& heights, int sideSize) //this will b
     int dropX = rand() % (sideSize);
     int dropY = rand() % (sideSize);
 
-    std::cout << "x: " << dropX << ", y: " << dropY << std::endl;
-
-    float dropZ = getHeightAtPoint(heights, dropX, dropY, sideSize);
 
     //will be used for previous position of droplet
     int xp = dropX;
     int yp = dropY;
-    float zp = dropZ;
 
     //storing velocity
     float vx = 0;
     float vy = 0;
-    float vz = 0;
 
     //offset for the droplet, keeps paths from being too similar
     int ox = ((rand() % 3) - 1); 
@@ -138,36 +131,62 @@ void MyGenerator::Erode(std::vector<float>& heights, int sideSize) //this will b
     float depositionRate = 0.1;
     float evapRate = 0.001;
 
+    float erosionRate = 0.1;
+
     std::clock_t c_start = std::clock();
     std::clock_t lastTick = c_start;
     float dt = 1.2;
 
-    while(volume >= minVol)
+    //while(volume >= minVol)
+    for(int i = 0; i < sideSize / 3; i++)
     {        
-        xp = dropX;
-        yp = dropY;
-        zp = dropZ;
         
+        if (dropX >= sideSize || dropY >= sideSize || dropX <= 0 || dropY <= 0)
+        {
+            break; //out of bounds
+        }
         
-        Vec3 normal = GetNormal(heights, Vec3(dropX, dropY, dropZ), sideSize);
+        Vec3 normal = GetNormal(heights, Vec3(dropX, dropY, getHeightAtPoint(heights, dropX,dropY, sideSize)), sideSize);
 
         if (normal.z == 1)
         {
-            break;
+            break; //surface is flat
         }
-        /*
-        std::clock_t c_end = std::clock();
-        dt = (c_end - lastTick) / CLOCKS_PER_SEC;
-        lastTick = c_end;
-        */
         
 
+        //talle version
+
+        float deposit = sediment * depositionRate * normal.z;
+        float erosion = erosionRate * (1 - normal.z);
+
+        heights[(sideSize * dropY) + dropX] += deposit - erosion;
+        sediment += erosion - deposit;
+
+        float speed = 1;
+
+        vx = friction * vx + normal.x * speed;
+        vy = friction * vy + normal.y * speed;
+        xp = dropX;
+        yp = dropY;
+        dropX += vx;
+        dropY += vy;
+
+
+
+        //weigert version
+        /*
         Vec2 speed = (Vec2(normal.x,normal.y) * dt) / (volume * density);
+        //std::cout << "change in x speed: " << speed.x << ", change in y speed: " << speed.y << std::endl;
         vx += speed.x;
         vy += speed.y;
 
         dropX += vx * dt;
-        dropY += vy * dt;        
+        dropY += vy * dt;     
+
+        if (dropX > sideSize || dropY > sideSize || dropX < 0 || dropY < 0)
+        {
+            break; //out of bounds
+        }
 
         vx *= (1.0 - dt * friction);
         vy *= (1.0 - dt * friction);
@@ -182,10 +201,22 @@ void MyGenerator::Erode(std::vector<float>& heights, int sideSize) //this will b
 
         sediment += dt * depositionRate * c_diff;
 
-        heights[(sideSize * dropY) + dropX] -= dt * volume * depositionRate * c_diff;
-        if (heights[(sideSize * dropY) + dropX] < 0) heights[(sideSize * dropY) + dropX] = 0;
+        float diff = dt * volume * depositionRate * c_diff;
+        if (diff > volume)
+        {
+            diff = volume;
+        }
+        if (diff < -volume)
+        {
+            diff = -volume;
+        }
+        std::cout << "diff: " << diff << std::endl;
+
+        heights[(sideSize * (dropY-1)) + dropX+1] -= diff;
+        if (heights[(sideSize * (dropY - 1)) + dropX+1] < 0) heights[(sideSize * dropY) + dropX] = 0;
 
         volume *= (1.0 - dt * evapRate);
+        */
     }
 }
 
@@ -225,15 +256,43 @@ Vec3 MyGenerator::crossProduct(Vec3 a, Vec3 b)
 
 Vec3 MyGenerator::GetNormal(std::vector<float>& heights, Vec3 point, int sideSize)
 {
+    float scale = 60;
     //get 3 points around point, maybe N, SE, and SW
     //get N-SE and N-SW vectors
     //get cross product of N-SE and N-SW
-
     if (point.x <= 0 || point.x >= sideSize || point.y <= 0 || point.y >= sideSize)
     {
         return Vec3(0, 0, 1);
     }
+    
+    //cardinal directions
+    Vec3 n = Vec3((getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x+1, point.y, sideSize)) * scale, 1.0, 0.0).Normalize() * 0.15;
+    n = n + Vec3((getHeightAtPoint(heights, point.x-1, point.y, sideSize) - getHeightAtPoint(heights, point.x + 1, point.y, sideSize)) * scale, 1.0, 0.0).Normalize() * 0.15;
+    n = n + Vec3(0.0, 1.0, (getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x, point.y+1, sideSize)) * scale).Normalize() * 0.15;
+    n = n + Vec3(0.0, 1.0, (getHeightAtPoint(heights, point.x, point.y-1, sideSize) - getHeightAtPoint(heights, point.x, point.y, sideSize)) * scale).Normalize() * 0.15;
 
+    //diagonals
+    //(getHeightAtPoint(heights, point.x, point.y, sideSize)
+    n = n + Vec3(((getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x + 1, point.y + 1, sideSize)) * scale) / sqrt(2),
+        sqrt(2),
+        ((getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x + 1, point.y + 1, sideSize)) * scale) / sqrt(2)).Normalize() * 0.1;
+
+    n = n + Vec3(((getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x + 1, point.y - 1, sideSize)) * scale) / sqrt(2),
+        sqrt(2),
+        ((getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x + 1, point.y - 1, sideSize)) * scale) / sqrt(2)).Normalize() * 0.1;
+
+    n = n + Vec3(((getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x - 1, point.y + 1, sideSize)) * scale) / sqrt(2),
+        sqrt(2),
+        ((getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x - 1, point.y + 1, sideSize)) * scale) / sqrt(2)).Normalize() * 0.1;
+
+    n = n + Vec3(((getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x - 1, point.y - 1, sideSize)) * scale) / sqrt(2),
+        sqrt(2),
+        ((getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x - 1, point.y - 1, sideSize)) * scale) / sqrt(2)).Normalize() * 0.1;
+
+
+    return n;
+
+    /*
     Vec3 north = Vec3(point.x, point.y-1, getHeightAtPoint(heights, point.x, point.y-1, sideSize));
     Vec3 southEast = Vec3(point.x+1, point.y + 1, getHeightAtPoint(heights, point.x+1, point.y + 1, sideSize));
     Vec3 southWest = Vec3(point.x - 1, point.y + 1, getHeightAtPoint(heights, point.x - 1, point.y + 1, sideSize));
@@ -242,10 +301,10 @@ Vec3 MyGenerator::GetNormal(std::vector<float>& heights, Vec3 point, int sideSiz
     Vec3 NSW = southWest - north;
 
     Vec3 cross = crossProduct(NSE, NSW); //normalize this to get normal vector
-    if (cross.z < 0) cross = crossProduct(NSW, NSE);
+    //if (cross.z < 0) cross = crossProduct(NSW, NSE);
     cross = cross.Normalize();
     
-    return cross;
+    return cross;*/
 }
 
 

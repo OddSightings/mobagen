@@ -133,6 +133,7 @@ void Manager::OnGui(ImGuiContext* context) {
   }
   if (generators[generatorId]->GetName() == "Tommy's")
   {
+      ImGui::SameLine();
       if (ImGui::Button("Erosion"))
       {
           //generators[generatorId].blackout = true;
