@@ -10,7 +10,6 @@ std::vector<Color32> MyGenerator::Generate(int sideSize, float displacement) {
 
   std::vector<float> heights;
 
-  std::vector<Vec2> used;
 
   std::map<int, std::map<int, TerrainNode>> terrain;
 
@@ -31,7 +30,7 @@ std::vector<Color32> MyGenerator::Generate(int sideSize, float displacement) {
   {
       for (int i = 0; i < erosions; i++)
       {
-          Erode(heights, sideSize, used);
+          Erode(heights, sideSize);
       }
   }
       
@@ -69,19 +68,11 @@ std::vector<Color32> MyGenerator::Generate(int sideSize, float displacement) {
           {
               c = Color32(255, 255, 255);
           }
-
-
-          if (showErosion)
-          {
-              if (std::count(used.begin(), used.end(), Vec2(x, y)))
-              { //check if erosion worked
-                  c = Color32(255, 0, 0);
-              }
-          }
-
           colors.emplace_back(c);
       }
+
   }
+
   std::cout<<colors.size() << std::endl;
   return colors;
 }
@@ -92,7 +83,7 @@ std::string MyGenerator::GetName() { return "Tommy's"; }
 //https://jobtalle.com/simulating_hydraulic_erosion.html
 //https://nickmcd.me/2020/04/10/simple-particle-based-hydraulic-erosion/
 
-void MyGenerator::Erode(std::vector<float>& heights, int sideSize, std::vector<Vec2>& used) //this will be run in a for loop in Generate, will be called maxEroders times
+void MyGenerator::Erode(std::vector<float>& heights, int sideSize) //this will be run in a for loop in Generate, will be called maxEroders times
 {
     //create waater droplet at random point in map
     int dropX = rand() % (sideSize);
@@ -169,11 +160,20 @@ void MyGenerator::Erode(std::vector<float>& heights, int sideSize, std::vector<V
         dropX += vx;
         dropY += vy;
 
-        used.push_back(Vec2(xp, yp));
-
         ox = 1 - rand() % 3;
         oy = 1 - rand() % 3;
     }
+}
+
+
+Color32 MyGenerator::ColorLerp(Color32 a, Color32 b, float f)
+{
+    Color32 newCol = Color32(
+        (b.r - a.r) * f + a.r,
+        (b.g - a.g) * f + a.g,
+        (b.b - a.b) * f + a.b
+    );
+    return newCol;
 }
 
 void MyGenerator::Blur(std::vector<float>& heights, int sideSize)

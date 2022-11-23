@@ -46,7 +46,7 @@ class MyGenerator : public ScenarioGeneratorBase{
   void BuildRoads(std::map<int, std::map<int, TerrainNode>>* nodes, int sideSize);
 
   void Erode(std::map<int, std::map<int, TerrainNode>>* nodes, int sideSize);
-  void Erode(std::vector<float>& heights, int sideSize, std::vector<Vec2>& used);
+  void Erode(std::vector<float>& heights, int sideSize);
 
   void Blur(std::vector<float>& heights, int sideSize);
 
@@ -55,11 +55,12 @@ class MyGenerator : public ScenarioGeneratorBase{
 
   void toggleBlackout() { blackout = !blackout; }
   void toggleErosion() { erosion = !erosion; }
-  void toggleVisibleErosion() { showErosion = !showErosion; }
+  void setEroders(int newErosions) { erosions = newErosions; }
 
   bool getErosion() { return erosion; }
+  int getEroders() { return erosions; }
 
-
+  Color32 ColorLerp(Color32 a, Color32 b, float f);
   void ChangeHeight(std::vector<float>& heights, int x, int y, int sideSize, float change);
 
   Vec3 crossProduct(Vec3 a, Vec3 b);
@@ -77,9 +78,8 @@ private:
 
 	bool road = false;
 	bool erosion = false;
-	bool showErosion = false;
 	
-	int erosions = 2000; //will add a slider in UI to control how much erosion there is
+	int erosions = 0; //will add a slider in UI to control how much erosion there is
 
 
 protected:

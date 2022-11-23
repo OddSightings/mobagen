@@ -133,20 +133,22 @@ void Manager::OnGui(ImGuiContext* context) {
   }
   if (generators[generatorId]->GetName() == "Tommy's")
   {
+      MyGenerator* temp = dynamic_cast<MyGenerator*>(generators[generatorId]);
+
       ImGui::SameLine();
       if (ImGui::Button("Erosion"))
       {
           //generators[generatorId].blackout = true;
-          MyGenerator* temp = dynamic_cast<MyGenerator*>(generators[generatorId]);
           temp->toggleErosion();
       }
-
-      if (ImGui::Button("Show Erosion"))
+      if (temp->getErosion())
       {
-          //generators[generatorId].blackout = true;
-          MyGenerator* temp = dynamic_cast<MyGenerator*>(generators[generatorId]);
-          temp->toggleVisibleErosion();
+          int numEroders = temp->getEroders();
+          if (ImGui::SliderInt("Erosion", &numEroders, 0, 2000)) {
+              temp->setEroders(numEroders);
+          }
       }
+      
   }
 
   ImGui::End();
