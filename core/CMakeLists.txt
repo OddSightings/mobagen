@@ -1,10 +1,12 @@
 set(BUILD_SHARED_LIBS FALSE)
 
 file(GLOB CORE_INC
+        CONFIGURE_DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/*.h
         ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp)
 
 file(GLOB CORE_SRC
+        CONFIGURE_DEPENDS
         ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/*.c
         )
@@ -60,4 +62,4 @@ install (FILES ${CORE_INC} DESTINATION include/core)
 #   add_custom_target(uninstall "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake")
 # ENDIF()
 
-include_directories(${SDL2_INCLUDE_DIR} core)
+#include_directories(${SDL2_INCLUDE_DIR} core)

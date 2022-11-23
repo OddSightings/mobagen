@@ -18,4 +18,3 @@ int main(int, char**) {
     SDL_Log("Engine Exited");
     return 0;
 }
-
