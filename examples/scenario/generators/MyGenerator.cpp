@@ -4,17 +4,13 @@
 #include <chrono>
 #include <ctime>
 
-//replace the colors vector with a map of TerrainNodes
-//in the for loop, set each node's color to be the value instead of emplacing it
-//run whichever modifying functions you want
-//then at the end go through each node and emplace its color to a vector of colors and return it
-
 std::vector<Color32> MyGenerator::Generate(int sideSize, float displacement) {
     
   std::vector<Color32> colors;
 
   std::vector<float> heights;
 
+  std::vector<Vec2> used;
 
   std::map<int, std::map<int, TerrainNode>> terrain;
 
@@ -35,41 +31,55 @@ std::vector<Color32> MyGenerator::Generate(int sideSize, float displacement) {
   {
       for (int i = 0; i < erosions; i++)
       {
-          Erode(heights, sideSize);
+          Erode(heights, sideSize, used);
       }
   }
       
+
+  //Blur(heights, sideSize);
   //modifications end
 
   for (int x = 0; x < sideSize; x++)
   {
       for (int y = 0; y < sideSize; y++)
       {
+          float m = getHeightAtPoint(heights, x, y, sideSize) * 255;
+          Color32 c;
           if (blackout)
           {
-              float m = getHeightAtPoint(heights, x, y, sideSize) * 255;
-              colors.emplace_back(m, m, m);
+              c = Color32(m, m, m);
           }
-          else if (getHeightAtPoint(heights, x, y, sideSize)*255 <= water)
+          else if (m <= water)
           {
-              colors.emplace_back(0, 0, 180);
+              c = Color32(0, 0, 180);
           }
-          else if (getHeightAtPoint(heights, x, y, sideSize) * 255 <= beach)
+          else if (m <= beach)
           {
-              colors.emplace_back(194, 178, 128);
+              c = Color32(194, 178, 128);
           }
-          else if (getHeightAtPoint(heights, x, y, sideSize) * 255 <= grass)
+          else if (m <= grass)
           {
-              colors.emplace_back(0, 180, 0);
+              c = Color32(0, 180, 0);
           }
-          else if (getHeightAtPoint(heights, x, y, sideSize)*255 <= mountain)
+          else if (m <= mountain)
           {
-              colors.emplace_back(63, 38, 29);
+              c = Color32(63, 38, 29);
           }
           else
           {
-              colors.emplace_back(255, 255, 255);
+              c = Color32(255, 255, 255);
           }
+
+
+          if (showErosion)
+          {
+              if (std::count(used.begin(), used.end(), Vec2(x, y)))
+              { //check if erosion worked
+                  c = Color32(255, 0, 0);
+              }
+          }
+
+          colors.emplace_back(c);
       }
   }
   std::cout<<colors.size() << std::endl;
@@ -77,29 +87,20 @@ std::vector<Color32> MyGenerator::Generate(int sideSize, float displacement) {
 }
 
 
-
 std::string MyGenerator::GetName() { return "Tommy's"; }
 
-
-
-void MyGenerator::BuildRoads(std::map<int, std::map<int, TerrainNode>>* nodes, int sideSize)
-{
-
-
-
-
-}
-//https://github.com/weigert/SimpleErosion/tree/master/source/include/world
+//https://jobtalle.com/simulating_hydraulic_erosion.html
 //https://nickmcd.me/2020/04/10/simple-particle-based-hydraulic-erosion/
 
-void MyGenerator::Erode(std::vector<float>& heights, int sideSize) //this will be run in a for loop in Generate, will be called maxEroders times
+void MyGenerator::Erode(std::vector<float>& heights, int sideSize, std::vector<Vec2>& used) //this will be run in a for loop in Generate, will be called maxEroders times
 {
-    float st = 1.2;
-
     //create waater droplet at random point in map
     int dropX = rand() % (sideSize);
     int dropY = rand() % (sideSize);
 
+    //used.push_back(Vec2(dropX, dropY));
+    int ox = 0;
+    int oy = 0;
 
     //will be used for previous position of droplet
     int xp = dropX;
@@ -108,122 +109,102 @@ void MyGenerator::Erode(std::vector<float>& heights, int sideSize) //this will b
     //storing velocity
     float vx = 0;
     float vy = 0;
-
-    //offset for the droplet, keeps paths from being too similar
-    int ox = ((rand() % 3) - 1); 
-    int oy = ((rand() % 3) - 1); 
-
-    //total volume of droplet
-    float volume = 1.0;
-
-    float minVol = 0.01;
-
     //fraction of volume that is sediment
     float sediment = 0;
 
-    //density of droplet (water is 1000 kg/m^3)
-    float density = 1;
-
     //friction of droplet (using standard for all terrain)
-    float friction = 0.05;
+    float friction = 0.1;
 
-    
     float depositionRate = 0.1;
-    float evapRate = 0.001;
 
-    float erosionRate = 0.1;
+    float erosionRate = 0.4;
 
-    std::clock_t c_start = std::clock();
-    std::clock_t lastTick = c_start;
-    float dt = 1.2;
+    float maxChange = 0.01;
+
+    float iterationScale = 0.04;
 
     //while(volume >= minVol)
     for(int i = 0; i < sideSize / 3; i++)
     {        
         
+        dropX += ox;
+        dropY += oy;
+
         if (dropX >= sideSize || dropY >= sideSize || dropX <= 0 || dropY <= 0)
         {
             break; //out of bounds
         }
         
         Vec3 normal = GetNormal(heights, Vec3(dropX, dropY, getHeightAtPoint(heights, dropX,dropY, sideSize)), sideSize);
-
+        //normal.print();
         if (normal.z == 1)
         {
             break; //surface is flat
         }
         
-
-        //talle version
-
         float deposit = sediment * depositionRate * normal.z;
-        float erosion = erosionRate * (1 - normal.z);
+        float erosionCount = erosionRate * (1 - normal.z);
 
-        heights[(sideSize * dropY) + dropX] += deposit - erosion;
-        sediment += erosion - deposit;
+       // std::cout << normal.z << std::endl;
+
+        float heightChange = deposit - erosionCount;
+        if (heightChange > maxChange) heightChange = maxChange;
+        if (heightChange < -maxChange) heightChange = -maxChange;
+
+        float sedimentChange = erosionCount - deposit;
+
+        heights[(sideSize * xp) + yp] -= heightChange;
+        sediment += sedimentChange;
+       // std::cout << sediment << std::endl;
+        if (sediment > 1) sediment = 1;
+        if (sediment < 0) sediment = 0;
 
         float speed = 1;
 
         vx = friction * vx + normal.x * speed;
         vy = friction * vy + normal.y * speed;
+
         xp = dropX;
         yp = dropY;
         dropX += vx;
         dropY += vy;
 
+        used.push_back(Vec2(xp, yp));
 
-
-        //weigert version
-        /*
-        Vec2 speed = (Vec2(normal.x,normal.y) * dt) / (volume * density);
-        //std::cout << "change in x speed: " << speed.x << ", change in y speed: " << speed.y << std::endl;
-        vx += speed.x;
-        vy += speed.y;
-
-        dropX += vx * dt;
-        dropY += vy * dt;     
-
-        if (dropX > sideSize || dropY > sideSize || dropX < 0 || dropY < 0)
-        {
-            break; //out of bounds
-        }
-
-        vx *= (1.0 - dt * friction);
-        vy *= (1.0 - dt * friction);
-
-        float dropSpeed = sqrt(vx * vx * vy * vy);
-
-        float maxSediment = volume * dropSpeed * (getHeightAtPoint(heights, xp, yp, sideSize) - getHeightAtPoint(heights, dropX, dropY, sideSize));
-
-        if (maxSediment < 0) maxSediment = 0;
-
-        float c_diff = maxSediment - sediment;
-
-        sediment += dt * depositionRate * c_diff;
-
-        float diff = dt * volume * depositionRate * c_diff;
-        if (diff > volume)
-        {
-            diff = volume;
-        }
-        if (diff < -volume)
-        {
-            diff = -volume;
-        }
-        std::cout << "diff: " << diff << std::endl;
-
-        heights[(sideSize * (dropY-1)) + dropX+1] -= diff;
-        if (heights[(sideSize * (dropY - 1)) + dropX+1] < 0) heights[(sideSize * dropY) + dropX] = 0;
-
-        volume *= (1.0 - dt * evapRate);
-        */
+        ox = 1 - rand() % 3;
+        oy = 1 - rand() % 3;
     }
 }
 
+void MyGenerator::Blur(std::vector<float>& heights, int sideSize)
+{
+    //does not work
+    for (int x = 1; x < sideSize; x++)
+    {
+        for (int y = 1; y < sideSize; y++)
+        {
+            float f = (
+                getHeightAtPoint(heights, x + 1, y, sideSize) +
+                getHeightAtPoint(heights, x, y + 1, sideSize) +
+                getHeightAtPoint(heights, x, y - 1, sideSize) +
+                getHeightAtPoint(heights, x - 1, y, sideSize)
+                ) * 0.125;
+            f += (
+                getHeightAtPoint(heights, x + 1, y + 1, sideSize) +
+                getHeightAtPoint(heights, x - 1, y + 1, sideSize) +
+                getHeightAtPoint(heights, x + 1, y - 1, sideSize) +
+                getHeightAtPoint(heights, x - 1, y - 1, sideSize)
+                ) * .0625;
+            f += getHeightAtPoint(heights, x, y, sideSize) * .25;
+
+            heights[y + (sideSize * x)] = f;
+        }
+    }
+}
 
 float MyGenerator::getHeightAtPoint(std::vector<float>& heights, int x, int y, int sideSize)
 {
-    return heights[(sideSize * y) + x];
+    return heights[(sideSize * x) + y];
 }
 
 
@@ -256,56 +237,40 @@ Vec3 MyGenerator::crossProduct(Vec3 a, Vec3 b)
 
 Vec3 MyGenerator::GetNormal(std::vector<float>& heights, Vec3 point, int sideSize)
 {
-    float scale = 60;
-    //get 3 points around point, maybe N, SE, and SW
-    //get N-SE and N-SW vectors
-    //get cross product of N-SE and N-SW
     if (point.x <= 0 || point.x >= sideSize || point.y <= 0 || point.y >= sideSize)
     {
         return Vec3(0, 0, 1);
     }
     
     //cardinal directions
-    Vec3 n = Vec3((getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x+1, point.y, sideSize)) * scale, 1.0, 0.0).Normalize() * 0.15;
-    n = n + Vec3((getHeightAtPoint(heights, point.x-1, point.y, sideSize) - getHeightAtPoint(heights, point.x + 1, point.y, sideSize)) * scale, 1.0, 0.0).Normalize() * 0.15;
-    n = n + Vec3(0.0, 1.0, (getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x, point.y+1, sideSize)) * scale).Normalize() * 0.15;
-    n = n + Vec3(0.0, 1.0, (getHeightAtPoint(heights, point.x, point.y-1, sideSize) - getHeightAtPoint(heights, point.x, point.y, sideSize)) * scale).Normalize() * 0.15;
-
-    //diagonals
-    //(getHeightAtPoint(heights, point.x, point.y, sideSize)
-    n = n + Vec3(((getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x + 1, point.y + 1, sideSize)) * scale) / sqrt(2),
-        sqrt(2),
-        ((getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x + 1, point.y + 1, sideSize)) * scale) / sqrt(2)).Normalize() * 0.1;
-
-    n = n + Vec3(((getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x + 1, point.y - 1, sideSize)) * scale) / sqrt(2),
-        sqrt(2),
-        ((getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x + 1, point.y - 1, sideSize)) * scale) / sqrt(2)).Normalize() * 0.1;
-
-    n = n + Vec3(((getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x - 1, point.y + 1, sideSize)) * scale) / sqrt(2),
-        sqrt(2),
-        ((getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x - 1, point.y + 1, sideSize)) * scale) / sqrt(2)).Normalize() * 0.1;
-
-    n = n + Vec3(((getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x - 1, point.y - 1, sideSize)) * scale) / sqrt(2),
-        sqrt(2),
-        ((getHeightAtPoint(heights, point.x, point.y, sideSize) - getHeightAtPoint(heights, point.x - 1, point.y - 1, sideSize)) * scale) / sqrt(2)).Normalize() * 0.1;
-
-
-    return n;
-
-    /*
-    Vec3 north = Vec3(point.x, point.y-1, getHeightAtPoint(heights, point.x, point.y-1, sideSize));
-    Vec3 southEast = Vec3(point.x+1, point.y + 1, getHeightAtPoint(heights, point.x+1, point.y + 1, sideSize));
-    Vec3 southWest = Vec3(point.x - 1, point.y + 1, getHeightAtPoint(heights, point.x - 1, point.y + 1, sideSize));
-
-    Vec3 NSE = southEast - north;
-    Vec3 NSW = southWest - north;
-
-    Vec3 cross = crossProduct(NSE, NSW); //normalize this to get normal vector
-    //if (cross.z < 0) cross = crossProduct(NSW, NSE);
-    cross = cross.Normalize();
+    Vec3 n = Vec3((getHeightAtPoint(heights, point.x, point.y, sideSize) * 100 - getHeightAtPoint(heights, point.x + 1, point.y, sideSize) * 100), 1.0, 0.0).Normalize() * 0.15;
+    n = n + Vec3((getHeightAtPoint(heights, point.x - 1, point.y, sideSize)*100 - getHeightAtPoint(heights, point.x, point.y, sideSize) * 100), 1.0, 0.0).Normalize() * 0.15;
+    n = n + Vec3(0.0, 1.0, (getHeightAtPoint(heights, point.x, point.y, sideSize)*100 - getHeightAtPoint(heights, point.x, point.y + 1, sideSize)*100)).Normalize() * 0.15;
+    n = n + Vec3(0.0, 1.0, (getHeightAtPoint(heights, point.x, point.y - 1, sideSize)*100 - getHeightAtPoint(heights, point.x, point.y, sideSize)*100)).Normalize() * 0.15;
     
-    return cross;*/
+    //diagonals
+
+    n = n + Vec3(((getHeightAtPoint(heights, point.x, point.y, sideSize) * 100 - getHeightAtPoint(heights, point.x + 1, point.y + 1, sideSize) * 100)) / sqrt(2),
+        sqrt(2),
+        ((getHeightAtPoint(heights, point.x, point.y, sideSize) * 100 - getHeightAtPoint(heights, point.x + 1, point.y + 1, sideSize) * 100)) / sqrt(2)).Normalize() * 0.1;
+
+    n = n + Vec3(((getHeightAtPoint(heights, point.x, point.y, sideSize) * 100 - getHeightAtPoint(heights, point.x + 1, point.y - 1, sideSize) * 100)) / sqrt(2),
+        sqrt(2),
+        ((getHeightAtPoint(heights, point.x, point.y, sideSize) * 100 - getHeightAtPoint(heights, point.x + 1, point.y - 1, sideSize) * 100)) / sqrt(2)).Normalize() * 0.1;
+
+    n = n + Vec3(((getHeightAtPoint(heights, point.x, point.y, sideSize) * 100 - getHeightAtPoint(heights, point.x - 1, point.y + 1, sideSize) * 100)) / sqrt(2),
+        sqrt(2),
+        ((getHeightAtPoint(heights, point.x, point.y, sideSize) * 100 - getHeightAtPoint(heights, point.x - 1, point.y + 1, sideSize) * 100)) / sqrt(2)).Normalize() * 0.1;
+
+    n = n + Vec3(((getHeightAtPoint(heights, point.x, point.y, sideSize) * 100 - getHeightAtPoint(heights, point.x - 1, point.y - 1, sideSize) * 100)) / sqrt(2),
+        sqrt(2),
+        ((getHeightAtPoint(heights, point.x, point.y, sideSize) * 100 - getHeightAtPoint(heights, point.x - 1, point.y - 1, sideSize) * 100)) / sqrt(2)).Normalize() * 0.1;
+        
+    Vec3 m = Vec3(n.x, n.z, n.y);
+    return m.Normalize();
+    
+
+
+
+
 }
-
-
-

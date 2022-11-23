@@ -2,6 +2,7 @@
 #define SCENARIOGENERATORBASE_H
 #include <ColorT.h>
 #include <string>
+#include <iostream>
 #include <vector>
 
 
@@ -28,7 +29,10 @@ public:
 	{
 		return Vec2(this->x / other, this->y / other);
 	}
-
+	bool operator==(const Vec2& other) const
+	{
+		return (this->x == other.x && this->y == other.y);
+	}
 
 };
 
@@ -68,7 +72,7 @@ public:
 	Vec3 Normalize()
 	{
 		Vec3* base = this;
-		float len = sqrt(base->x * base->x * base->y * base->y * base->z * base->z); //magnitude of the vector
+		float len = sqrt((base->x * base->x) + (base->y * base->y) + (base->z * base->z)); //magnitude of the vector
 
 		if (len != 0)
 		{
@@ -77,6 +81,12 @@ public:
 			base->z /= len;
 		}
 		return *base;
+	}
+
+
+	void print()
+	{
+		std::cout << "x: " << this->x << ", y: " << this->y << ", z: " << this->z << std::endl;
 	}
 
 };

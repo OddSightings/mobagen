@@ -140,6 +140,13 @@ void Manager::OnGui(ImGuiContext* context) {
           MyGenerator* temp = dynamic_cast<MyGenerator*>(generators[generatorId]);
           temp->toggleErosion();
       }
+
+      if (ImGui::Button("Show Erosion"))
+      {
+          //generators[generatorId].blackout = true;
+          MyGenerator* temp = dynamic_cast<MyGenerator*>(generators[generatorId]);
+          temp->toggleVisibleErosion();
+      }
   }
 
   ImGui::End();
